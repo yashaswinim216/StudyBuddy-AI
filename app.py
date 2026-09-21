@@ -24,131 +24,23 @@ st.set_page_config(
 
 # ----------------------------------------------------------- persistent state
 # Values kept in session state so the theme and results survive reruns
-st.session_state.setdefault("theme", "☀️ Light Mode")
+st.session_state.setdefault("theme", "☀️")
 st.session_state.setdefault("ai_result", None)
 st.session_state.setdefault("ai_success", False)
+st.session_state.setdefault("selected_feature", None)
 st.session_state.setdefault("planner_hours", 4.0)
 
-# --------------------------------------------------------------- base styling
-# Hide Streamlit's built-in developer menu, deploy button and footer so the
-# interface shows only the student study features. Also set the shared layout,
-# spacing and transition rules used by both themes.
-BASE_CSS = """
-    header[data-testid="stHeader"] { display: none; }
-    [data-testid="stToolbar"] { display: none; }
-    #MainMenu { visibility: hidden; }
-    footer { visibility: hidden; }
-
-    /* Comfortable, centered reading width and tidy section spacing */
-    .stApp .block-container { max-width: 960px; padding-top: 1.2rem; padding-bottom: 3rem; }
-    .stApp h1 { margin-bottom: 0.25rem; }
-    .stApp h3 { margin-bottom: 0.15rem; }
-
-    /* Consistent rounded controls */
-    .stApp [data-testid="baseButton"] { border-radius: 10px; }
-    .stApp [data-testid="stPills"] button { border-radius: 999px; }
-
-    /* AI output readability */
-    .stApp [data-testid="stMarkdownContainer"] { line-height: 1.6; }
-    .stApp [data-testid="stMarkdownContainer"] h2,
-    .stApp [data-testid="stMarkdownContainer"] h3 { margin-top: 1.1rem; }
-
-    /* Gentle theme transition, skipped when reduced motion is requested */
-    .stApp, .stApp * { transition: background-color .25s ease, border-color .25s ease, color .2s ease; }
-    @media (prefers-reduced-motion: reduce) {
-        .stApp, .stApp * { transition: none; }
-    }
-"""
-
-# Bright, clean light theme
-LIGHT_CSS = """
-    .stApp {
-        --background-color: #f7f8fb;
-        --secondary-background-color: #ffffff;
-        --primary-color: #2f6bff;
-        --text-color: #1a1c20;
-        background-color: #f7f8fb;
-        color: #1a1c20;
-    }
-    .stApp [data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: #ffffff;
-        border-color: #e3e7ee;
-    }
-    .stApp textarea, .stApp input {
-        background-color: #ffffff;
-        color: #1a1c20;
-        border-color: #d6dbe4;
-    }
-"""
-
-# Dark theme with light readable text
-DARK_CSS = """
-    .stApp {
-        --background-color: #0e1117;
-        --secondary-background-color: #161b26;
-        --primary-color: #7aa2ff;
-        --text-color: #e8eaf0;
-        background-color: #0e1117;
-        color: #e8eaf0;
-    }
-    .stApp [data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: #161b26;
-        border-color: #2a3140;
-    }
-    .stApp textarea, .stApp input {
-        background-color: #12161f !important;
-        color: #e8eaf0 !important;
-        border-color: #2a3140 !important;
-    }
-    .stApp [data-testid="stPills"] button {
-        background-color: #161b26;
-        color: #c9cfdb;
-        border-color: #2a3140;
-    }
-    .stApp [data-testid="stPills"] button[aria-checked="true"] {
-        background-color: #25355c;
-        color: #d9e5ff;
-        border-color: #4a6baf;
-    }
-    .stApp hr { border-color: #2a3140; }
-    .stApp [data-testid="stMarkdownContainer"] code {
-        background-color: #1c2230;
-        color: #d9e5ff;
-    }
-    .stApp a { color: #8fb1ff; }
-"""
-
-theme_css = DARK_CSS if st.session_state["theme"].startswith("🌙") else LIGHT_CSS
-st.markdown(
-    f"<style>{BASE_CSS}{theme_css}</style>", unsafe_allow_html=True
-)
-
-# ---------------------------------------------------------------- app header
-# Title block on the left, compact theme toggle on the right
-title_col, toggle_col = st.columns([4, 1], vertical_alignment="center")
-
-with title_col:
-    st.title("🎓 StudyBuddy AI")
-    st.subheader("Your AI-Powered Study Assistant")
-    st.caption("Learn smarter, revise faster, and improve your answers with AI.")
-
-with toggle_col:
-    st.segmented_control(
-        "Theme",
-        ["☀️ Light Mode", "🌙 Dark Mode"],
-        key="theme",
-        label_visibility="collapsed",
-    )
-
-# ------------------------------------------------------------- feature cards
+# ----------------------------------------------------------------- feature data
 FEATURES = [
-    "📝 Summarize Notes",
-    "💡 Explain Concept",
-    "❓ Generate Quiz",
-    "✍️ Improve Answer",
-    "🗂️ Generate Flashcards",
-    "📅 Study Planner",
+    ("📝 Summarize Notes", "Turn long notes into concise revision points."),
+    ("💡 Explain Concept", "Understand ideas with simple examples."),
+    ("❓ Generate Quiz", "Practice with 5 multiple-choice questions."),
+    ("✍️ Improve Answer", "Polish grammar, clarity and structure."),
+    ("🗂️ Generate Flashcards", "Revise quickly with Q&A cards."),
+    ("📅 Study Planner", "Get a day-by-day exam study schedule."),
 ]
+
+FEATURE_NAMES = [name for name, _ in FEATURES]
 
 # Friendly loading message for every feature, shown while the AI is working
 SPINNER_MESSAGES = {
@@ -160,11 +52,140 @@ SPINNER_MESSAGES = {
     "📅 Study Planner": "📅 Planning your schedule...",
 }
 
+# ---------------------------------------------------------------- theme styling
+# Hide Streamlit's built-in developer menu, deploy button and footer so the
+# interface shows only the student study features. Shared layout, spacing and
+# transition rules used by both themes live here.
+BASE_CSS = """
+    header[data-testid="stHeader"] { display: none; }
+    [data-testid="stToolbar"] { display: none; }
+    #MainMenu { visibility: hidden; }
+    footer { visibility: hidden; }
 
+    /* Comfortable, centered reading width and tidy section spacing */
+    .stApp .block-container { max-width: 900px; padding-top: 1.4rem; padding-bottom: 3rem; }
+
+    /* Header typography */
+    .stApp h1 { font-size: 2.1rem; letter-spacing: -0.02em; margin-bottom: 0.1rem; }
+    .stApp h1 + div p { font-size: 1.05rem; }
+
+    /* Compact, clean theme toggle in the header */
+    .stApp [data-testid="stSegmentedControl"] { justify-content: flex-end; }
+    .stApp [data-testid="stSegmentedControl"] button {
+        min-height: 34px; padding: 0.15rem 0.55rem; font-size: 0.95rem; border-radius: 9px;
+    }
+
+    /* Feature cards: equal size, subtle hover lift */
+    .stApp [data-testid="stBaseButton-secondary"] {
+        min-height: 58px; font-weight: 600; border-radius: 12px; width: 100%;
+        transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    }
+    .stApp [data-testid="stBaseButton-secondary"]:hover {
+        transform: translateY(-2px);
+    }
+    .stApp [data-testid="stBaseButton-primary"]:hover {
+        transform: translateY(-2px);
+    }
+    .stApp [data-testid="stBaseButton-primary"], .stApp [data-testid="stBaseButton-secondary"] {
+        transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    }
+
+    /* Let card rows wrap gracefully on narrow screens */
+    div.feature-grid-anchor ~ div [data-testid="stHorizontalBlock"] { flex-wrap: wrap; }
+    div.feature-grid-anchor ~ div [data-testid="stColumn"] { min-width: 168px; }
+
+    /* AI output readability */
+    .stApp [data-testid="stMarkdownContainer"] { line-height: 1.65; }
+    .stApp [data-testid="stMarkdownContainer"] h2,
+    .stApp [data-testid="stMarkdownContainer"] h3 { margin-top: 1.15rem; margin-bottom: 0.3rem; }
+    .stApp [data-testid="stMarkdownContainer"] ul { padding-left: 1.25rem; }
+    .stApp [data-testid="stMarkdownContainer"] li { margin: 0.3rem 0; }
+
+    /* Gentle theme transition, skipped when reduced motion is requested */
+    .stApp, .stApp * { transition: background-color .25s ease, border-color .25s ease, color .2s ease; }
+    @media (prefers-reduced-motion: reduce) {
+        .stApp, .stApp * { transition: none; }
+    }
+"""
+
+# Bright, clean light theme
+# Selectors deliberately match Streamlit's own .stApp[data-theme=...] specificity
+# so the chosen theme always wins over Streamlit's OS-following default.
+LIGHT_CSS = """
+    .stApp, .stApp[data-theme="light"], .stApp[data-theme="dark"] {
+        --background-color: #f6f8fc;
+        --secondary-background-color: #ffffff;
+        --primary-color: #2f6bff;
+        --text-color: #171a20;
+        background-color: #f6f8fc;
+        color: #171a20;
+    }
+    .stApp [data-testid="stVerticalBlockBorderWrapper"] {
+        background-color: #ffffff;
+        border-color: #e4e8f0;
+        box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+    }
+    .stApp textarea, .stApp input {
+        background-color: #ffffff !important;
+        color: #171a20 !important;
+        border-color: #d7dce6 !important;
+    }
+    .stApp [data-testid="stBaseButton-secondary"] {
+        background-color: #ffffff; border-color: #d7dce6; color: #2b3442;
+        box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+    }
+    .stApp [data-testid="stBaseButton-secondary"]:hover { border-color: #9db4e8; }
+    .stApp [data-testid="stBaseButton-primary"] { box-shadow: 0 1px 3px rgba(47, 107, 255, 0.35); }
+    .stApp [data-testid="stCaptionContainer"], .stApp small { color: #5a6474; }
+"""
+
+# Professional dark theme with light readable text
+DARK_CSS = """
+    .stApp, .stApp[data-theme="light"], .stApp[data-theme="dark"] {
+        --background-color: #0e1117;
+        --secondary-background-color: #151a24;
+        --primary-color: #7aa2ff;
+        --text-color: #e8eaf0;
+        background-color: #0e1117;
+        color: #e8eaf0;
+    }
+    .stApp [data-testid="stVerticalBlockBorderWrapper"] {
+        background-color: #151a24;
+        border-color: #2a3140;
+    }
+    .stApp textarea, .stApp input {
+        background-color: #10141d !important;
+        color: #e8eaf0 !important;
+        border-color: #2a3140 !important;
+    }
+    .stApp [data-testid="stPills"] button {
+        background-color: #151a24; color: #c9cfdb; border-color: #2a3140;
+    }
+    .stApp [data-testid="stPills"] button[aria-checked="true"] {
+        background-color: #25355c; color: #d9e5ff; border-color: #4a6baf;
+    }
+    .stApp [data-testid="stBaseButton-secondary"] {
+        background-color: #151a24; border-color: #2a3140; color: #d5dae6;
+    }
+    .stApp [data-testid="stBaseButton-secondary"]:hover { border-color: #4a6baf; }
+    .stApp [data-testid="stBaseButton-primary"] { background-color: #2f54b8; color: #f2f6ff; }
+    .stApp hr { border-color: #2a3140; }
+    .stApp [data-testid="stMarkdownContainer"] code {
+        background-color: #1b2231; color: #d9e5ff;
+    }
+    .stApp [data-testid="stCaptionContainer"], .stApp small { color: #97a1b5; }
+    .stApp a { color: #8fb1ff; }
+"""
+
+theme_css = DARK_CSS if st.session_state["theme"] == "🌙" else LIGHT_CSS
+st.markdown(f"<style>{BASE_CSS}{theme_css}</style>", unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------------- header
 def clear_all() -> None:
     """Reset every input, the selected feature and the previous AI output."""
     st.session_state["study_input"] = ""
-    st.session_state["feature_pills"] = FEATURES[0]
+    st.session_state["selected_feature"] = FEATURE_NAMES[0]
     st.session_state["planner_subjects"] = ""
     st.session_state["planner_topics"] = ""
     st.session_state["planner_hours"] = 4.0
@@ -173,33 +194,17 @@ def clear_all() -> None:
     st.session_state["ai_success"] = False
 
 
-# ---------------------------------------------------------------- input area
-with st.container(border=True):
-    heading_col, clear_col = st.columns([4, 1])
+title_col, toggle_col = st.columns([5, 1], vertical_alignment="center")
 
-    with heading_col:
-        st.markdown("##### 📚 Your Study Material")
+with title_col:
+    st.title("🎓 StudyBuddy AI")
 
-    with clear_col:
-        st.button("🗑️ Clear", on_click=clear_all, use_container_width=True)
+with toggle_col:
+    st.segmented_control("Theme", ["☀️", "🌙"], key="theme", label_visibility="collapsed")
 
-    user_input = st.text_area(
-        "Your study material",
-        key="study_input",
-        placeholder="Enter your notes, question, concept, or answer here...",
-        height=200,
-        label_visibility="collapsed",
-    )
-
-    if len(user_input) > MAX_INPUT_CHARS:
-        st.warning(
-            f"⚠️ Your input is {len(user_input)} characters. Please keep it under "
-            f"{MAX_INPUT_CHARS} characters for faster, more reliable results."
-        )
-
-    selected_feature = st.pills(
-        "Choose a feature", FEATURES, default=FEATURES[0], key="feature_pills"
-    )
+# Subtitle and description sit below the title row, full width
+st.subheader("Your AI-Powered Student Study Assistant")
+st.caption("Learn smarter, revise faster, and improve your answers with AI.")
 
 
 def build_prompt(feature: str, text: str) -> str:
@@ -235,7 +240,9 @@ def run_study_planner() -> None:
             height=90,
         )
         left, right = st.columns(2)
-        exam_date = left.date_input("Exam date", min_value=date.today(), key="planner_date")
+        exam_date = left.date_input(
+            "Exam date", min_value=date.today(), key="planner_date"
+        )
         hours = right.number_input(
             "Available study hours per day",
             min_value=0.5,
@@ -294,6 +301,48 @@ def show_output(success: bool, result: str) -> None:
     else:
         st.error(f"❌ {result}")
 
+
+# ------------------------------------------------------------------ input area
+with st.container(border=True):
+    st.markdown("#### What would you like to study?")
+
+    head_col, clear_col = st.columns([5, 1])
+    with clear_col:
+        st.button("🗑️ Clear", on_click=clear_all, type="tertiary", use_container_width=True)
+
+    user_input = st.text_area(
+        "Your study material",
+        key="study_input",
+        placeholder="Paste your notes, ask a question, enter a concept, or add your answer here...",
+        height=190,
+        label_visibility="collapsed",
+    )
+
+    if len(user_input) > MAX_INPUT_CHARS:
+        st.warning(
+            f"⚠️ Your input is {len(user_input)} characters. Please keep it under "
+            f"{MAX_INPUT_CHARS} characters for faster, more reliable results."
+        )
+
+    # ------------------------------------------------------------ feature cards
+    st.markdown("**Choose a feature**")
+    st.markdown('<div class="feature-grid-anchor"></div>', unsafe_allow_html=True)
+
+    for row_start in range(0, len(FEATURES), 3):
+        cols = st.columns(3)
+        for col, (name, blurb) in zip(cols, FEATURES[row_start:row_start + 3]):
+            with col:
+                is_selected = st.session_state["selected_feature"] == name
+                if col.button(
+                    name,
+                    type="primary" if is_selected else "secondary",
+                    use_container_width=True,
+                ):
+                    st.session_state["selected_feature"] = name
+                    is_selected = True
+                col.caption(blurb)
+
+selected_feature = st.session_state["selected_feature"] or FEATURE_NAMES[0]
 
 # -------------------------------------------------------------- AI output box
 st.markdown("---")
