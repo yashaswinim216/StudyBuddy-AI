@@ -77,6 +77,18 @@ BASE_CSS = """
     /* Hide the developer-only install nudge shown by some Streamlit builds */
     [data-testid="stStatusWidget"], [data-testid="stAppStatusWidget"] { display: none; }
 
+    /* Button text always follows the button's own theme color. Streamlit puts
+       labels in <p>/<span>/<div> inside the button; without this, global text
+       rules below would repaint them and make buttons unreadable. */
+    .stApp button p, .stApp button span, .stApp button div { color: inherit; }
+    /* Streamlit renders button labels as a markdown container INSIDE the
+       button. Without this, the theme's "markdown text" rule repaints it
+       (and everything it inherits from) in the page text color, making the
+       label invisible on same-colored button backgrounds. Higher specificity
+       beats the theme rule regardless of stylesheet order. */
+    .stApp button [data-testid="stMarkdownContainer"],
+    .stApp button [data-testid="stMarkdownContainer"] * { color: inherit; }
+
     /* Lexend: designed to improve reading fluency for students.
        Listed explicitly because Streamlit declares its own font on some
        wrapper elements, which would beat plain inheritance. */
@@ -159,13 +171,13 @@ LIGHT_CSS = """
         background-color: #f6f7f2;
         color: #1a2238;
     }
-    /* Ink text everywhere Streamlit would otherwise use its own theme color */
-    .stApp label, .stApp p, .stApp li, .stApp span, .stApp div { color: #1a2238; }
-    .stApp strong, .stApp b { color: #1a2238; font-weight: 600; }
+    /* Ink text, scoped to real text containers so buttons keep their colors */
+    .stApp label { color: #1a2238; }
     .stApp [data-testid="stMarkdownContainer"],
     .stApp [data-testid="stMarkdownContainer"] * { color: #1a2238; }
     .stApp [data-testid="stMarkdownContainer"] li::marker { color: #1a2238; }
-    .stApp [data-testid="stSpinner"] { color: #1a2238; }
+    .stApp [data-testid="stSpinner"],
+    .stApp [data-testid="stSpinner"] * { color: #1a2238; }
 
     .stApp [data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #ffffff;
@@ -263,13 +275,13 @@ DARK_CSS = """
         background-color: #11151c;
         color: #e9edf5;
     }
-    /* Chalk text everywhere Streamlit would otherwise use its own theme color */
-    .stApp label, .stApp p, .stApp li, .stApp span, .stApp div { color: #e9edf5; }
-    .stApp strong, .stApp b { color: #f4f6fb; font-weight: 600; }
+    /* Chalk text, scoped to real text containers so buttons keep their colors */
+    .stApp label { color: #e9edf5; }
     .stApp [data-testid="stMarkdownContainer"],
     .stApp [data-testid="stMarkdownContainer"] * { color: #e9edf5; }
     .stApp [data-testid="stMarkdownContainer"] li::marker { color: #e9edf5; }
-    .stApp [data-testid="stSpinner"] { color: #e9edf5; }
+    .stApp [data-testid="stSpinner"],
+    .stApp [data-testid="stSpinner"] * { color: #e9edf5; }
 
     .stApp [data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #171c26;
