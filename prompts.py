@@ -64,3 +64,31 @@ same sentence.
 CONCEPT OR QUESTION:
 {text}
 """
+
+
+def generate_quiz_prompt(text: str) -> str:
+    """Build the prompt for the Generate Quiz feature."""
+    return f"""You are a quiz generator for college students.
+
+Create exactly 5 multiple-choice questions from the content below.
+Base the questions primarily on the provided material - do not go beyond it.
+
+Format every question exactly like this (markdown):
+
+**Q1.** <question text>
+- **A.** <option>
+- **B.** <option>
+- **C.** <option>
+- **D.** <option>
+
+**Correct Answer:** <letter>
+**Explanation:** <one or two sentences explaining why it is correct>
+
+Rules:
+- Exactly one option is correct; the other three are plausible but wrong.
+- Spread the correct answers across different letters (not all the same).
+- Cover different parts of the content, not one idea five times.
+
+CONTENT:
+{text}
+"""

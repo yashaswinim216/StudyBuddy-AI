@@ -6,6 +6,7 @@ from gemini_helper import get_gemini_response
 from prompts import (
     MAX_INPUT_CHARS,
     explain_concept_prompt,
+    generate_quiz_prompt,
     summarize_notes_prompt,
 )
 
@@ -89,5 +90,7 @@ def build_prompt(feature: str, text: str) -> str:
         return summarize_notes_prompt(text)
     if feature == "💡 Explain Concept":
         return explain_concept_prompt(text)
+    if feature == "❓ Generate Quiz":
+        return generate_quiz_prompt(text)
     # Remaining features are added in the following commits.
     return text
