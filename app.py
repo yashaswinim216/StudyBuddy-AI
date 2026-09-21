@@ -27,7 +27,6 @@ st.set_page_config(
 st.session_state.setdefault("theme", "☀️")
 st.session_state.setdefault("ai_result", None)
 st.session_state.setdefault("ai_success", False)
-st.session_state.setdefault("selected_feature", None)
 st.session_state.setdefault("planner_hours", 4.0)
 
 # ----------------------------------------------------------------- feature data
@@ -42,6 +41,9 @@ FEATURES = [
 
 FEATURE_NAMES = [name for name, _ in FEATURES]
 
+# Summarize Notes is highlighted from the start so a card is always selected
+st.session_state.setdefault("selected_feature", FEATURE_NAMES[0])
+
 # Friendly loading message for every feature, shown while the AI is working
 SPINNER_MESSAGES = {
     "📝 Summarize Notes": "📝 Summarizing your notes...",
@@ -53,14 +55,31 @@ SPINNER_MESSAGES = {
 }
 
 # ---------------------------------------------------------------- theme styling
+# Design system: "Ink & Highlighter". Actions are ink, the selected feature is
+# highlighted like a marked line in study notes, everything else stays quiet.
+#
 # Hide Streamlit's built-in developer menu, deploy button and footer so the
-# interface shows only the student study features. Shared layout, spacing and
-# transition rules used by both themes live here.
+# interface shows only the student study features. Shared layout, typography
+# and transition rules used by both themes live here.
 BASE_CSS = """
+    @import url('https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;600;700&display=swap');
+
     header[data-testid="stHeader"] { display: none; }
     [data-testid="stToolbar"] { display: none; }
     #MainMenu { visibility: hidden; }
     footer { visibility: hidden; }
+
+    /* Hide the developer-only install nudge shown by some Streamlit builds */
+    [data-testid="stStatusWidget"], [data-testid="stAppStatusWidget"] { display: none; }
+
+    /* Lexend: designed to improve reading fluency for students */
+    .stApp, .stApp button, .stApp input, .stApp textarea, .stApp select,
+    .stApp [data-testid="stHeadingWithActionElements"],
+    .stApp [data-testid="stMarkdownContainer"],
+    .stApp [data-testid="stSegmentedControl"],
+    .stApp h1, .stApp h2, .stApp h3, .stApp h4 {
+        font-family: 'Lexend', 'Segoe UI', system-ui, sans-serif;
+    }
 
     /* Comfortable, centered reading width and tidy section spacing */
     .stApp .block-container { max-width: 900px; padding-top: 1.4rem; padding-bottom: 3rem; }
@@ -70,7 +89,8 @@ BASE_CSS = """
     .stApp h1 + div p { font-size: 1.05rem; }
 
     /* Compact, clean theme toggle in the header */
-    .stApp [data-testid="stSegmentedControl"] { justify-content: flex-end; }
+    .stApp [data-testid="stSegmentedControl"],
+    .stApp h1, .stApp h2, .stApp h3, .stApp h4 { justify-content: flex-end; }
     .stApp [data-testid="stSegmentedControl"] button {
         min-height: 34px; padding: 0.15rem 0.55rem; font-size: 0.95rem; border-radius: 9px;
     }
@@ -83,23 +103,34 @@ BASE_CSS = """
     .stApp [data-testid="stBaseButton-secondary"]:hover {
         transform: translateY(-2px);
     }
+    .stApp [data-testid="stBaseButton-primary"] {
+        border-radius: 12px;
+        transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+    }
     .stApp [data-testid="stBaseButton-primary"]:hover {
         transform: translateY(-2px);
     }
-    .stApp [data-testid="stBaseButton-primary"], .stApp [data-testid="stBaseButton-secondary"] {
-        transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+
+    /* The selected feature card is "highlighted" like a marked line in notes.
+       Scoped to the feature grid so the Generate button keeps its own style. */
+    [data-testid="stHorizontalBlock"] [data-testid="stBaseButton-primary"] {
+        min-height: 58px; font-weight: 600; width: 100%;
     }
 
     /* Let card rows wrap gracefully on narrow screens */
-    div.feature-grid-anchor ~ div [data-testid="stHorizontalBlock"] { flex-wrap: wrap; }
-    div.feature-grid-anchor ~ div [data-testid="stColumn"] { min-width: 168px; }
+    [data-testid="stHorizontalBlock"] { flex-wrap: wrap; }
 
-    /* AI output readability */
-    .stApp [data-testid="stMarkdownContainer"] { line-height: 1.65; }
+    /* AI output readability: generous leading and a comfortable measure */
+    .stApp [data-testid="stMarkdownContainer"] { line-height: 1.65; max-width: 46rem; }
     .stApp [data-testid="stMarkdownContainer"] h2,
     .stApp [data-testid="stMarkdownContainer"] h3 { margin-top: 1.15rem; margin-bottom: 0.3rem; }
     .stApp [data-testid="stMarkdownContainer"] ul { padding-left: 1.25rem; }
     .stApp [data-testid="stMarkdownContainer"] li { margin: 0.3rem 0; }
+
+    /* Keyboard focus stays visible in every theme */
+    .stApp button:focus-visible, .stApp textarea:focus-visible, .stApp input:focus-visible {
+        outline: 2px solid currentColor; outline-offset: 2px;
+    }
 
     /* Gentle theme transition, skipped when reduced motion is requested */
     .stApp, .stApp * { transition: background-color .25s ease, border-color .25s ease, color .2s ease; }
@@ -108,73 +139,103 @@ BASE_CSS = """
     }
 """
 
-# Bright, clean light theme
+# Light theme: ink on paper.
 # Selectors deliberately match Streamlit's own .stApp[data-theme=...] specificity
 # so the chosen theme always wins over Streamlit's OS-following default.
 LIGHT_CSS = """
     .stApp, .stApp[data-theme="light"], .stApp[data-theme="dark"] {
-        --background-color: #f6f8fc;
+        --background-color: #f6f7f2;
         --secondary-background-color: #ffffff;
-        --primary-color: #2f6bff;
-        --text-color: #171a20;
-        background-color: #f6f8fc;
-        color: #171a20;
+        --primary-color: #1a2238;
+        --text-color: #1a2238;
+        background-color: #f6f7f2;
+        color: #1a2238;
     }
     .stApp [data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #ffffff;
-        border-color: #e4e8f0;
-        box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+        border-color: #e5e5dc;
+        box-shadow: 0 1px 3px rgba(26, 34, 56, 0.06);
     }
     .stApp textarea, .stApp input {
         background-color: #ffffff !important;
-        color: #171a20 !important;
-        border-color: #d7dce6 !important;
+        color: #1a2238 !important;
+        border-color: #d8d8cf !important;
     }
+    /* Unselected feature cards: quiet paper tiles */
     .stApp [data-testid="stBaseButton-secondary"] {
-        background-color: #ffffff; border-color: #d7dce6; color: #2b3442;
-        box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+        background-color: #ffffff; border-color: #d8d8cf; color: #2a3348;
+        box-shadow: 0 1px 2px rgba(26, 34, 56, 0.05);
     }
-    .stApp [data-testid="stBaseButton-secondary"]:hover { border-color: #9db4e8; }
-    .stApp [data-testid="stBaseButton-primary"] { box-shadow: 0 1px 3px rgba(47, 107, 255, 0.35); }
+    .stApp [data-testid="stBaseButton-secondary"]:hover { border-color: #1a2238; }
+
+    /* Actions are ink */
+    .stApp [data-testid="stBaseButton-primary"] {
+        background-color: #1a2238; color: #ffffff; border-color: #1a2238;
+    }
+    .stApp [data-testid="stBaseButton-primary"]:hover { background-color: #273156; }
+
+    /* The selected feature card is the highlighter moment */
+    [data-testid="stHorizontalBlock"] [data-testid="stBaseButton-primary"] {
+        background-color: #ffd84d; color: #1a2238; border-color: #e8c233;
+        box-shadow: none;
+    }
+    [data-testid="stHorizontalBlock"] [data-testid="stBaseButton-primary"]:hover {
+        background-color: #ffdf66;
+    }
+
     .stApp [data-testid="stCaptionContainer"], .stApp small { color: #5a6474; }
+    .stApp hr { border-color: #e5e5dc; }
+    .stApp [data-testid="stMarkdownContainer"] code {
+        background-color: #efefe8; color: #1a2238;
+    }
+    .stApp a { color: #27408b; }
 """
 
-# Professional dark theme with light readable text
+# Dark theme: chalk on chalkboard, with the same highlighter for selection.
 DARK_CSS = """
     .stApp, .stApp[data-theme="light"], .stApp[data-theme="dark"] {
-        --background-color: #0e1117;
-        --secondary-background-color: #151a24;
-        --primary-color: #7aa2ff;
-        --text-color: #e8eaf0;
-        background-color: #0e1117;
-        color: #e8eaf0;
+        --background-color: #11151c;
+        --secondary-background-color: #171c26;
+        --primary-color: #e9edf5;
+        --text-color: #e9edf5;
+        background-color: #11151c;
+        color: #e9edf5;
     }
     .stApp [data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: #151a24;
-        border-color: #2a3140;
+        background-color: #171c26;
+        border-color: #2b3342;
     }
     .stApp textarea, .stApp input {
-        background-color: #10141d !important;
-        color: #e8eaf0 !important;
-        border-color: #2a3140 !important;
+        background-color: #12161e !important;
+        color: #e9edf5 !important;
+        border-color: #2b3342 !important;
     }
-    .stApp [data-testid="stPills"] button {
-        background-color: #151a24; color: #c9cfdb; border-color: #2a3140;
-    }
-    .stApp [data-testid="stPills"] button[aria-checked="true"] {
-        background-color: #25355c; color: #d9e5ff; border-color: #4a6baf;
-    }
+    /* Unselected feature cards: quiet chalkboard panels */
     .stApp [data-testid="stBaseButton-secondary"] {
-        background-color: #151a24; border-color: #2a3140; color: #d5dae6;
+        background-color: #171c26; border-color: #2b3342; color: #d5dae6;
     }
-    .stApp [data-testid="stBaseButton-secondary"]:hover { border-color: #4a6baf; }
-    .stApp [data-testid="stBaseButton-primary"] { background-color: #2f54b8; color: #f2f6ff; }
-    .stApp hr { border-color: #2a3140; }
-    .stApp [data-testid="stMarkdownContainer"] code {
-        background-color: #1b2231; color: #d9e5ff;
+    .stApp [data-testid="stBaseButton-secondary"]:hover { border-color: #556179; }
+
+    /* Actions are chalk: light button, ink text */
+    .stApp [data-testid="stBaseButton-primary"] {
+        background-color: #e9edf5; color: #14202e; border-color: #e9edf5;
     }
+    .stApp [data-testid="stBaseButton-primary"]:hover { background-color: #ffffff; }
+
+    /* The selected feature card keeps the highlighter glow */
+    [data-testid="stHorizontalBlock"] [data-testid="stBaseButton-primary"] {
+        background-color: #ffde59; color: #1a2238; border-color: #d9b826;
+    }
+    [data-testid="stHorizontalBlock"] [data-testid="stBaseButton-primary"]:hover {
+        background-color: #ffe473;
+    }
+
     .stApp [data-testid="stCaptionContainer"], .stApp small { color: #97a1b5; }
-    .stApp a { color: #8fb1ff; }
+    .stApp hr { border-color: #2b3342; }
+    .stApp [data-testid="stMarkdownContainer"] code {
+        background-color: #1d2431; color: #f2e2a0;
+    }
+    .stApp a { color: #a9c0ff; }
 """
 
 theme_css = DARK_CSS if st.session_state["theme"] == "🌙" else LIGHT_CSS
@@ -326,7 +387,6 @@ with st.container(border=True):
 
     # ------------------------------------------------------------ feature cards
     st.markdown("**Choose a feature**")
-    st.markdown('<div class="feature-grid-anchor"></div>', unsafe_allow_html=True)
 
     for row_start in range(0, len(FEATURES), 3):
         cols = st.columns(3)
