@@ -1,149 +1,203 @@
-# StudyBuddy AI 🎓
+# StudyBuddy AI
 
-**Your AI-Powered Study Assistant**
+### An AI-Powered Student Study Assistant
 
-Learn smarter, revise faster, and improve your answers with AI.
+StudyBuddy AI is an AI-powered student utility application designed to help college students understand, revise, and organize their study material using the Google Gemini API.
 
-## What is StudyBuddy AI?
+## Overview
 
-StudyBuddy AI is an AI-powered study assistant built for college students.
-Paste your notes, questions, concepts, or written answers, choose one of six
-study features, and get an instant, well-structured AI response.
+Students can provide notes, questions, concepts, or written answers and receive AI-powered assistance through a simple Streamlit interface.
 
-### Why it was created
-
-Students spend hours condensing notes, hunting for practice questions, and
-trying to understand difficult concepts on their own. This project shows how
-a modern Large Language Model (LLM) API can be integrated into a simple,
-practical tool that supports everyday study work.
-
-### How it helps students
-
-- **Revise faster** — turn long notes into crisp summaries and flashcards
-- **Understand deeply** — get simple explanations with real-world examples
-- **Practice effectively** — generate quizzes with answers and explanations
-- **Write better** — polish written answers without losing their meaning
-- **Plan smarter** — build a day-by-day study schedule before exams
+**Student Input → Feature Selection → Prompt Generation → Gemini API → AI Response → Display Output**
 
 ## Features
 
-### 📝 Note Summarization
-Generates a concise summary, exactly **5 key points**, and a list of
-important terms with short explanations — perfect for exam revision.
+### 📝 Summarize Notes
 
-### 💡 Concept Explanation
-Explains any concept like a friendly tutor: simple definition, easy
-explanation, step-by-step breakdown, a real-world example, and key points
-to remember.
+Generates:
 
-### ❓ Quiz Generation
-Creates **5 multiple-choice questions** (A–D options) based on your content,
-each with the correct answer and a short explanation.
+- Concise summary
+- Five key points
+- Important terms
 
-### ✍️ Answer Improvement
-Improves grammar, spelling, sentence structure, clarity, organization, and
-academic presentation of your written answers — while carefully **preserving
-your original meaning**.
+### 💡 Explain Concept
 
-### 🗂️ Flashcard Generation
-Converts study material into **5–10 question-and-answer flashcards** for
-quick revision.
+Provides:
+
+- Simple definition
+- Easy explanation
+- Example
+- Important points
+
+### ❓ Generate Quiz
+
+Generates:
+
+- Five multiple-choice questions
+- Four options per question
+- Correct answers
+- Short explanations
+
+### ✍️ Improve Answer
+
+Improves:
+
+- Grammar
+- Spelling
+- Clarity
+- Structure
+- Academic presentation
+
+The original meaning of the answer is preserved.
+
+### 🗂️ Generate Flashcards
+
+Creates 5–10 question-and-answer flashcards from study material.
 
 ### 📅 AI Study Planner
-Enter your subjects, topics, exam date, and available study hours per day to
-receive a realistic, day-by-day study schedule with revision slots.
 
-### ☀️🌙 Light / Dark Mode
-A compact theme toggle at the top of the page switches between a bright
-clean light theme and a dark theme. The choice stays active while you use
-the app, and all inputs, cards and output adapt to it.
+Creates a personalized study schedule based on:
+
+- Subjects
+- Topics
+- Exam date
+- Available study hours
+
+## Additional Features
+
+### ☀️ Light Mode / 🌙 Dark Mode
+
+Allows users to switch between light and dark themes.
 
 ### 🗑️ Clear / Reset
-One click clears the entered text, resets the selected feature and planner
-fields, and removes the previous AI output so you can start fresh.
 
-## Technologies
+Clears entered content and previous AI output.
 
-| Technology | Purpose |
-| --- | --- |
-| Python | Core programming language |
-| Streamlit | Web application interface |
-| Google Gemini API | AI response generation |
-| Google GenAI SDK | Official Python SDK for the Gemini API |
-| python-dotenv | Secure environment variable handling |
-| GitHub | Version control and project hosting |
+### ✅ Input Validation
 
-## Installation
+Prevents empty or incomplete requests.
 
-### 1. Clone or download the project
+### ⚠️ Error Handling
 
-```bash
-git clone <your-repository-url>
-cd studybuddy-ai
+Handles API failures, timeouts, quota issues, invalid credentials, and empty responses with user-friendly messages.
+
+## Technology Stack
+
+| Technology        | Purpose                         |
+| ----------------- | ------------------------------- |
+| Python            | Application development         |
+| Streamlit         | User interface                  |
+| Google Gemini API | AI response generation          |
+| Google GenAI SDK  | Gemini API integration          |
+| python-dotenv     | Environment variable management |
+| Git               | Version control                 |
+| GitHub            | Source code hosting             |
+
+## Project Structure
+
+```text
+StudyBuddy-AI/
+│
+├── app.py
+├── gemini_helper.py
+├── prompts.py
+├── requirements.txt
+├── README.md
+├── .gitignore
+└── .env.example
 ```
 
-### 2. Create and activate a virtual environment
+## Installation and Setup
+
+### Clone the repository
+
+```bash
+git clone https://github.com/yashaswinim216/StudyBuddy-AI.git
+cd StudyBuddy-AI
+```
+
+### Create virtual environment
+
+Windows:
 
 ```bash
 python -m venv venv
 venv\Scripts\activate
 ```
 
-> On Linux/macOS use `source venv/bin/activate` instead.
+Linux/macOS:
 
-### 3. Install the required packages
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
+
+### Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure your Gemini API key
+### Configure the Gemini API key
 
-Create a file named `.env` in the project root and add your key:
+Create a local `.env` file in the project root:
 
 ```env
-GEMINI_API_KEY=your_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
 ```
 
-You can get a free API key from [Google AI Studio](https://aistudio.google.com/apikey).
+Users must obtain their own Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey) and store it securely. Never hard-code the key in the source code and never commit it to the repository.
 
-### 5. Run the application
+### Run the application
 
 ```bash
 streamlit run app.py
 ```
 
-The app opens automatically in your browser (usually at
-`http://localhost:8501`).
+The application should normally open at:
 
-## Usage
-
-1. Paste your notes, concept, question, or written answer into the text area
-2. Click a feature button (Summarize, Explain, Quiz, Improve, Flashcards)
-3. Press **Generate** and wait a few seconds for the AI response
-4. For the **Study Planner**, fill in subjects, topics, exam date, and daily
-   study hours, then press **Create Study Plan**
-5. Use the **🗑️ Clear** button to reset the form, and the ☀️/🌙 toggle to
-   switch between light and dark themes
+```text
+http://localhost:8501
+```
 
 ## Security
 
-- The Gemini API key is stored **only in environment variables**, loaded from
-  a `.env` file using `python-dotenv`
-- The `.env` file is listed in `.gitignore`, so it is **never committed to
-  GitHub**
-- The key is never hard-coded in the source code, never displayed in the
-  interface, and never sent to the browser
-- Requests always run from the Python backend — the key stays on your machine
+- API keys must never be hard-coded in the source code.
+- API keys must never be committed to GitHub.
+- `.env` is ignored by Git, so it is never uploaded to the repository.
+- For deployment, use environment variables or Streamlit secrets instead of committing a `.env` file.
+- If an API key is accidentally exposed, it should be revoked immediately and replaced with a new one.
+
+## GitHub Usage
+
+```text
+git add .
+git commit -m "commit message"
+git push
+```
 
 ## Project Objective
 
-This project demonstrates **practical LLM API integration for a real student
-use case**: designing effective prompts, handling API errors gracefully,
-securing API keys with environment variables, and building a clean,
-beginner-friendly interface with Streamlit. Every feature maps to a genuine
-study task, making the project easy to demonstrate and extend.
+This project demonstrates:
 
----
+- Practical LLM API integration
+- Prompt engineering
+- Student-focused AI utilities
+- Input validation
+- Error handling
+- Secure API key management
+- User interface development
 
-Made for students, by a student. Happy studying! 📚
+## Future Enhancements
+
+- PDF/document-based study material
+- Subject-wise study history
+- More advanced quiz modes
+- Voice-based interaction
+- Progress tracking
+
+## Author
+
+**Yashaswini M**
+
+GitHub: [https://github.com/yashaswinim216](https://github.com/yashaswinim216)
