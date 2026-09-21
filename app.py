@@ -22,24 +22,24 @@ st.set_page_config(
     layout="wide",
 )
 
+# Hide Streamlit's built-in developer menu, deploy button and footer so the
+# interface shows only the student study features
+st.markdown(
+    """
+    <style>
+        header[data-testid="stHeader"] { display: none; }
+        [data-testid="stToolbar"] { display: none; }
+        #MainMenu { visibility: hidden; }
+        footer { visibility: hidden; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # ---------------------------------------------------------------- app header
 st.title("🎓 StudyBuddy AI")
 st.subheader("Your AI-Powered Study Assistant")
 st.caption("Learn smarter, revise faster, and improve your answers with AI.")
-
-# ---------------------------------------------------------------- input area
-user_input = st.text_area(
-    "Your study material",
-    placeholder="Enter your notes, question, concept, or answer here...",
-    height=220,
-)
-
-# Friendly guard against oversized requests (they slow the AI down)
-if len(user_input) > MAX_INPUT_CHARS:
-    st.warning(
-        f"⚠️ Your input is {len(user_input)} characters. Please keep it under "
-        f"{MAX_INPUT_CHARS} characters for faster, more reliable results."
-    )
 
 # ------------------------------------------------------------- feature cards
 FEATURES = [
@@ -51,11 +51,34 @@ FEATURES = [
     "📅 Study Planner",
 ]
 
-selected_feature = st.pills("Choose a feature", FEATURES, default=FEATURES[0])
+# Friendly loading message for every feature, shown while the AI is working
+SPINNER_MESSAGES = {
+    "📝 Summarize Notes": "📝 Summarizing your notes...",
+    "💡 Explain Concept": "💡 Preparing a simple explanation...",
+    "❓ Generate Quiz": "❓ Creating your quiz...",
+    "✍️ Improve Answer": "✍️ Polishing your answer...",
+    "🗂️ Generate Flashcards": "🗂️ Building your flashcards...",
+    "📅 Study Planner": "📅 Planning your schedule...",
+}
 
-# -------------------------------------------------------------- AI output box
-st.markdown("---")
-st.header("🤖 AI Output")
+# ---------------------------------------------------------------- input area
+with st.container(border=True):
+    st.markdown("##### 📚 Your Study Material")
+    user_input = st.text_area(
+        "Your study material",
+        placeholder="Enter your notes, question, concept, or answer here...",
+        height=200,
+        label_visibility="collapsed",
+    )
+
+    if len(user_input) > MAX_INPUT_CHARS:
+        st.warning(
+            f"⚠️ Your input is {len(user_input)} characters. Please keep it under "
+            f"{MAX_INPUT_CHARS} characters for faster, more reliable results."
+        )
+
+    selected_feature = st.pills("Choose a feature", FEATURES, default=FEATURES[0])
+
 
 def build_prompt(feature: str, text: str) -> str:
     """Pick the right prompt template for the selected feature."""
@@ -74,69 +97,81 @@ def build_prompt(feature: str, text: str) -> str:
 
 def run_study_planner() -> None:
     """Study planner: collects exam details, validates them and builds a plan."""
-    st.markdown("Fill in your exam details below to get a personalized schedule.")
+    with st.container(border=True):
+        st.markdown("##### 📅 Plan Your Exam Preparation")
+        st.caption("Fill in your exam details below to get a personalized schedule.")
 
-    subjects = st.text_input(
-        "Subjects (comma-separated)",
-        placeholder="e.g. Data Structures, DBMS, Mathematics",
-    )
-    topics = st.text_area(
-        "Topics to cover (comma-separated)",
-        placeholder="e.g. Linked Lists, Normalization, Probability",
-        height=100,
-    )
-    left, right = st.columns(2)
-    exam_date = left.date_input("Exam date", min_value=date.today())
-    hours = right.number_input(
-        "Available study hours per day",
-        min_value=0.5,
-        max_value=16.0,
-        value=4.0,
-        step=0.5,
-    )
+        subjects = st.text_input(
+            "Subjects (comma-separated)",
+            placeholder="e.g. Data Structures, DBMS, Mathematics",
+        )
+        topics = st.text_area(
+            "Topics to cover (comma-separated)",
+            placeholder="e.g. Linked Lists, Normalization, Probability",
+            height=90,
+        )
+        left, right = st.columns(2)
+        exam_date = left.date_input("Exam date", min_value=date.today())
+        hours = right.number_input(
+            "Available study hours per day",
+            min_value=0.5,
+            max_value=16.0,
+            value=4.0,
+            step=0.5,
+        )
 
-    plan_clicked = st.button(
-        "📅 Create Study Plan", type="primary", use_container_width=True
-    )
-    if not plan_clicked:
-        return
+        plan_clicked = st.button(
+            "📅 Create Study Plan", type="primary", use_container_width=True
+        )
+        if not plan_clicked:
+            return
 
-    # Validate every required field before calling the API
-    problems = []
-    if not subjects.strip():
-        problems.append("Please enter at least one subject.")
-    if not topics.strip():
-        problems.append("Please enter the topics you need to cover.")
-    if exam_date <= date.today():
-        problems.append("Exam date must be a future date.")
-    if hours <= 0:
-        problems.append("Study hours per day must be greater than zero.")
-    if problems:
-        for problem in problems:
-            st.warning(f"⚠️ {problem}")
-        return
+        # Validate every required field before calling the API
+        problems = []
+        if not subjects.strip():
+            problems.append("Please enter at least one subject.")
+        if not topics.strip():
+            problems.append("Please enter the topics you need to cover.")
+        if exam_date <= date.today():
+            problems.append("Exam date must be a future date.")
+        if hours <= 0:
+            problems.append("Study hours per day must be greater than zero.")
+        if problems:
+            for problem in problems:
+                st.warning(f"⚠️ {problem}")
+            return
 
-    days_left = (exam_date - date.today()).days
-    prompt = study_planner_prompt(
-        subjects.strip(),
-        topics.strip(),
-        exam_date.strftime("%d %B %Y"),
-        days_left,
-        hours,
-    )
+        days_left = (exam_date - date.today()).days
+        prompt = study_planner_prompt(
+            subjects.strip(),
+            topics.strip(),
+            exam_date.strftime("%d %B %Y"),
+            days_left,
+            hours,
+        )
 
-    with st.spinner("🤖 Planning your schedule... please wait"):
-        try:
-            success, result = get_gemini_response(prompt)
-        except RuntimeError as err:
-            success, result = False, str(err)
+        with st.spinner(SPINNER_MESSAGES["📅 Study Planner"]):
+            try:
+                success, result = get_gemini_response(prompt)
+            except RuntimeError as err:
+                success, result = False, str(err)
 
+    show_output(success, result)
+
+
+def show_output(success: bool, result: str) -> None:
+    """Display the AI result (or a friendly error) in the output section."""
     if success:
-        st.success("✅ Study plan ready! Follow it day by day.")
-        st.markdown(result)
+        st.success("✅ Done! Your result is ready below.")
+        with st.container(border=True):
+            st.markdown(result)
     else:
         st.error(f"❌ {result}")
 
+
+# -------------------------------------------------------------- AI output box
+st.markdown("---")
+st.header("🤖 AI Output")
 
 if selected_feature == "📅 Study Planner":
     run_study_planner()
@@ -156,14 +191,10 @@ else:
         prompt = build_prompt(selected_feature, user_input)
 
         # Send the prompt to Gemini and display the result (or a friendly error)
-        with st.spinner("🤖 Thinking... please wait"):
+        with st.spinner(SPINNER_MESSAGES.get(selected_feature, "🤖 Thinking...")):
             try:
                 success, result = get_gemini_response(prompt)
             except RuntimeError as err:
                 success, result = False, str(err)
 
-        if success:
-            st.success("✅ Done! Your result is ready below.")
-            st.markdown(result)
-        else:
-            st.error(f"❌ {result}")
+        show_output(success, result)
