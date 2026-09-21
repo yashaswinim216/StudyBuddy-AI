@@ -3,7 +3,11 @@
 import streamlit as st
 
 from gemini_helper import get_gemini_response
-from prompts import MAX_INPUT_CHARS, summarize_notes_prompt
+from prompts import (
+    MAX_INPUT_CHARS,
+    explain_concept_prompt,
+    summarize_notes_prompt,
+)
 
 # Basic page setup: title, icon and a wide layout that works on desktop and mobile
 st.set_page_config(
@@ -83,5 +87,7 @@ def build_prompt(feature: str, text: str) -> str:
     """Pick the right prompt template for the selected feature."""
     if feature == "📝 Summarize Notes":
         return summarize_notes_prompt(text)
+    if feature == "💡 Explain Concept":
+        return explain_concept_prompt(text)
     # Remaining features are added in the following commits.
     return text

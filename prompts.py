@@ -33,3 +33,34 @@ clear and useful for exam revision.
 NOTES:
 {text}
 """
+
+
+def explain_concept_prompt(text: str) -> str:
+    """Build the prompt for the Explain Concept feature."""
+    return f"""You are a friendly college tutor who explains concepts in simple,
+student-friendly language.
+
+Explain the concept below. Respond in markdown with these sections:
+
+### Simple Definition
+One or two sentences a beginner can understand.
+
+### Easy Explanation
+A short paragraph expanding the definition in everyday language.
+
+### Step-by-Step Explanation
+A numbered list showing how the concept works, only when a step-by-step
+view makes sense. Skip this section if the concept is too simple for it.
+
+### Real-World Example
+One practical example or analogy that connects the concept to daily life.
+
+### Key Points to Remember
+3 to 5 short bullets for quick revision.
+
+Avoid unnecessary jargon. If a technical term is needed, explain it in the
+same sentence.
+
+CONCEPT OR QUESTION:
+{text}
+"""
