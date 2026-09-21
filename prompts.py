@@ -145,3 +145,36 @@ Rules:
 STUDY MATERIAL:
 {text}
 """
+
+
+def study_planner_prompt(
+    subjects: str, topics: str, exam_date: str, days_left: int, hours_per_day: float
+) -> str:
+    """Build the prompt for the AI Study Planner feature."""
+    return f"""You are an academic study planner for college students.
+
+Create a practical day-by-day study schedule from this information:
+
+- Subjects: {subjects}
+- Topics to cover: {topics}
+- Exam date: {exam_date} ({days_left} days from today)
+- Available study time: {hours_per_day} hours per day
+
+Respond in markdown with:
+
+### Study Plan Overview
+One or two sentences summarizing the strategy for the available days.
+
+### Daily Schedule
+One block per day until the exam, formatted like:
+
+**Day 1 ({exam_date})**
+- Subject: <subject> | Topic: <topic> | Duration: <x hours>
+- Revision: <what to revise, where appropriate>
+
+Rules:
+- Spread the topics sensibly across the available days; harder subjects get more time.
+- Keep each day within {hours_per_day} hours in total.
+- Add short revision slots on the last one or two days before the exam.
+- The plan must be realistic and easy to follow.
+"""
