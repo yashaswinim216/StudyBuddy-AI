@@ -2,6 +2,8 @@
 
 import streamlit as st
 
+from gemini_helper import get_gemini_response
+
 # Basic page setup: title, icon and a wide layout that works on desktop and mobile
 st.set_page_config(
     page_title="StudyBuddy AI",
@@ -41,9 +43,20 @@ if selected_feature == "📅 Study Planner":
     # The planner gets its own input form, shown in later commits.
     st.info("The study planner will be available soon.")
 else:
-    st.button("Generate", type="primary", use_container_width=True)
+    generate_clicked = st.button("Generate", type="primary", use_container_width=True)
 
     if not user_input.strip():
         st.warning("⚠️ Please enter some study material or a question first.")
-    else:
-        st.info("AI features will be integrated in the next update.")
+    elif generate_clicked:
+        # Send the input to Gemini and display the result (or a friendly error)
+        with st.spinner("🤖 Thinking... please wait"):
+            try:
+                success, result = get_gemini_response(user_input)
+            except RuntimeError as err:
+                success, result = False, str(err)
+
+        if success:
+            st.success("✅ Done! Your result is ready below.")
+            st.markdown(result)
+        else:
+            st.error(f"❌ {result}")
