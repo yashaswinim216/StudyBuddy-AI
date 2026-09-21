@@ -3,6 +3,7 @@
 import streamlit as st
 
 from gemini_helper import get_gemini_response
+from prompts import MAX_INPUT_CHARS, summarize_notes_prompt
 
 # Basic page setup: title, icon and a wide layout that works on desktop and mobile
 st.set_page_config(
@@ -22,6 +23,13 @@ user_input = st.text_area(
     placeholder="Enter your notes, question, concept, or answer here...",
     height=220,
 )
+
+# Friendly guard against oversized requests (they slow the AI down)
+if len(user_input) > MAX_INPUT_CHARS:
+    st.warning(
+        f"⚠️ Your input is {len(user_input)} characters. Please keep it under "
+        f"{MAX_INPUT_CHARS} characters for faster, more reliable results."
+    )
 
 # ------------------------------------------------------------- feature cards
 FEATURES = [
@@ -48,10 +56,19 @@ else:
     if not user_input.strip():
         st.warning("⚠️ Please enter some study material or a question first.")
     elif generate_clicked:
-        # Send the input to Gemini and display the result (or a friendly error)
+        if len(user_input) > MAX_INPUT_CHARS:
+            st.error(
+                f"❌ Input is too long ({len(user_input)} characters). "
+                f"Please shorten it to {MAX_INPUT_CHARS} characters or less."
+            )
+            st.stop()
+
+        prompt = build_prompt(selected_feature, user_input)
+
+        # Send the prompt to Gemini and display the result (or a friendly error)
         with st.spinner("🤖 Thinking... please wait"):
             try:
-                success, result = get_gemini_response(user_input)
+                success, result = get_gemini_response(prompt)
             except RuntimeError as err:
                 success, result = False, str(err)
 
@@ -60,3 +77,11 @@ else:
             st.markdown(result)
         else:
             st.error(f"❌ {result}")
+
+
+def build_prompt(feature: str, text: str) -> str:
+    """Pick the right prompt template for the selected feature."""
+    if feature == "📝 Summarize Notes":
+        return summarize_notes_prompt(text)
+    # Remaining features are added in the following commits.
+    return text
