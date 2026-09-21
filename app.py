@@ -27,7 +27,6 @@ st.set_page_config(
 st.session_state.setdefault("theme", "☀️")
 st.session_state.setdefault("ai_result", None)
 st.session_state.setdefault("ai_success", False)
-st.session_state.setdefault("planner_hours", 4.0)
 
 # ----------------------------------------------------------------- feature data
 FEATURES = [
@@ -43,6 +42,7 @@ FEATURE_NAMES = [name for name, _ in FEATURES]
 
 # Summarize Notes is highlighted from the start so a card is always selected
 st.session_state.setdefault("selected_feature", FEATURE_NAMES[0])
+st.session_state.setdefault("planner_hours", 4.0)
 
 # Friendly loading message for every feature, shown while the AI is working
 SPINNER_MESSAGES = {
@@ -58,6 +58,11 @@ SPINNER_MESSAGES = {
 # Design system: "Ink & Highlighter". Actions are ink, the selected feature is
 # highlighted like a marked line in study notes, everything else stays quiet.
 #
+# Streamlit computes many component colors from its own OS-following theme, so
+# every component below gets explicit theme-aware colors. Without this, labels,
+# alerts and AI output can render in the "other" theme's colors (for example
+# near-white text on the light paper background).
+#
 # Hide Streamlit's built-in developer menu, deploy button and footer so the
 # interface shows only the student study features. Shared layout, typography
 # and transition rules used by both themes live here.
@@ -72,12 +77,15 @@ BASE_CSS = """
     /* Hide the developer-only install nudge shown by some Streamlit builds */
     [data-testid="stStatusWidget"], [data-testid="stAppStatusWidget"] { display: none; }
 
-    /* Lexend: designed to improve reading fluency for students */
+    /* Lexend: designed to improve reading fluency for students.
+       Listed explicitly because Streamlit declares its own font on some
+       wrapper elements, which would beat plain inheritance. */
     .stApp, .stApp button, .stApp input, .stApp textarea, .stApp select,
+    .stApp label, .stApp p,
     .stApp [data-testid="stHeadingWithActionElements"],
     .stApp [data-testid="stMarkdownContainer"],
     .stApp [data-testid="stSegmentedControl"],
-    .stApp h1, .stApp h2, .stApp h3, .stApp h4 {
+    .stApp [data-testid="stButtonGroup"] {
         font-family: 'Lexend', 'Segoe UI', system-ui, sans-serif;
     }
 
@@ -89,9 +97,9 @@ BASE_CSS = """
     .stApp h1 + div p { font-size: 1.05rem; }
 
     /* Compact, clean theme toggle in the header */
-    .stApp [data-testid="stSegmentedControl"],
-    .stApp h1, .stApp h2, .stApp h3, .stApp h4 { justify-content: flex-end; }
-    .stApp [data-testid="stSegmentedControl"] button {
+    .stApp [data-testid="stSegmentedControl"] { justify-content: flex-end; }
+    .stApp [data-testid="stSegmentedControl"] button,
+    .stApp [data-testid="stButtonGroup"] [role="radio"] {
         min-height: 34px; padding: 0.15rem 0.55rem; font-size: 0.95rem; border-radius: 9px;
     }
 
@@ -151,28 +159,63 @@ LIGHT_CSS = """
         background-color: #f6f7f2;
         color: #1a2238;
     }
+    /* Ink text everywhere Streamlit would otherwise use its own theme color */
+    .stApp label, .stApp p, .stApp li, .stApp span, .stApp div { color: #1a2238; }
+    .stApp strong, .stApp b { color: #1a2238; font-weight: 600; }
+    .stApp [data-testid="stMarkdownContainer"],
+    .stApp [data-testid="stMarkdownContainer"] * { color: #1a2238; }
+    .stApp [data-testid="stMarkdownContainer"] li::marker { color: #1a2238; }
+    .stApp [data-testid="stSpinner"] { color: #1a2238; }
+
     .stApp [data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #ffffff;
         border-color: #e5e5dc;
         box-shadow: 0 1px 3px rgba(26, 34, 56, 0.06);
     }
-    .stApp textarea, .stApp input {
+    /* Inputs: white fields, dark text, medium-gray placeholders */
+    .stApp textarea, .stApp input,
+    .stApp [data-testid="stDateInputField"], .stApp [data-testid="stDateInputButton"],
+    .stApp [data-testid="stNumberInputField"], .stApp [data-testid="stNumberInputStepUp"],
+    .stApp [data-testid="stNumberInputStepDown"] {
         background-color: #ffffff !important;
         color: #1a2238 !important;
         border-color: #d8d8cf !important;
     }
+    .stApp [data-testid="stNumberInputStepUp"], .stApp [data-testid="stNumberInputStepDown"] {
+        border-left: 1px solid #d8d8cf;
+    }
+    .stApp textarea::placeholder, .stApp input::placeholder {
+        color: #767e8c !important; opacity: 1;
+    }
+    /* Date picker calendar popover */
+    .stApp [data-testid="stDatePickerPopover"],
+    .stApp [data-testid="stDatePickerPopover"] * {
+        background-color: #ffffff; color: #1a2238; border-color: #d8d8cf;
+    }
+
+    /* Alerts: dark, readable text per message kind on their pale tints */
+    .stApp [data-testid="stAlertContainer"] { color: #1a2238; }
+    .stApp [data-testid="stAlertContentInfo"],
+    .stApp [data-testid="stAlertContentInfo"] * { color: #1a2238; }
+    .stApp [data-testid="stAlertContentSuccess"],
+    .stApp [data-testid="stAlertContentSuccess"] * { color: #1e5c2f; }
+    .stApp [data-testid="stAlertContentWarning"],
+    .stApp [data-testid="stAlertContentWarning"] * { color: #5f4400; }
+    .stApp [data-testid="stAlertContentError"],
+    .stApp [data-testid="stAlertContentError"] * { color: #8c1d18; }
+
     /* Unselected feature cards: quiet paper tiles */
     .stApp [data-testid="stBaseButton-secondary"] {
         background-color: #ffffff; border-color: #d8d8cf; color: #2a3348;
         box-shadow: 0 1px 2px rgba(26, 34, 56, 0.05);
     }
-    .stApp [data-testid="stBaseButton-secondary"]:hover { border-color: #1a2238; }
+    .stApp [data-testid="stBaseButton-secondary"]:hover { border-color: #1a2238; color: #1a2238; }
 
     /* Actions are ink */
     .stApp [data-testid="stBaseButton-primary"] {
         background-color: #1a2238; color: #ffffff; border-color: #1a2238;
     }
-    .stApp [data-testid="stBaseButton-primary"]:hover { background-color: #273156; }
+    .stApp [data-testid="stBaseButton-primary"]:hover { background-color: #273156; color: #ffffff; }
 
     /* The selected feature card is the highlighter moment */
     [data-testid="stHorizontalBlock"] [data-testid="stBaseButton-primary"] {
@@ -180,7 +223,26 @@ LIGHT_CSS = """
         box-shadow: none;
     }
     [data-testid="stHorizontalBlock"] [data-testid="stBaseButton-primary"]:hover {
-        background-color: #ffdf66;
+        background-color: #ffdf66; color: #1a2238;
+    }
+
+    /* Quiet utility buttons (Clear) */
+    .stApp [data-testid="stBaseButton-tertiary"] {
+        background-color: transparent; color: #2a3348; border-color: transparent;
+    }
+    .stApp [data-testid="stBaseButton-tertiary"]:hover {
+        background-color: #eceee7; color: #1a2238;
+    }
+
+    /* Theme toggle: ink text, calm paper chips, highlighter for the active one */
+    .stApp [data-testid="stButtonGroup"] [role="radio"] {
+        background-color: #eceee7; color: #2a3348; border: 1px solid #d8d8cf;
+    }
+    .stApp [data-testid="stButtonGroup"] [role="radio"]:hover {
+        border-color: #1a2238; color: #1a2238;
+    }
+    .stApp [data-testid="stButtonGroup"] [role="radio"][data-selected="true"] {
+        background-color: #ffd84d; color: #1a2238; border-color: #e8c233;
     }
 
     .stApp [data-testid="stCaptionContainer"], .stApp small { color: #5a6474; }
@@ -201,33 +263,87 @@ DARK_CSS = """
         background-color: #11151c;
         color: #e9edf5;
     }
+    /* Chalk text everywhere Streamlit would otherwise use its own theme color */
+    .stApp label, .stApp p, .stApp li, .stApp span, .stApp div { color: #e9edf5; }
+    .stApp strong, .stApp b { color: #f4f6fb; font-weight: 600; }
+    .stApp [data-testid="stMarkdownContainer"],
+    .stApp [data-testid="stMarkdownContainer"] * { color: #e9edf5; }
+    .stApp [data-testid="stMarkdownContainer"] li::marker { color: #e9edf5; }
+    .stApp [data-testid="stSpinner"] { color: #e9edf5; }
+
     .stApp [data-testid="stVerticalBlockBorderWrapper"] {
         background-color: #171c26;
         border-color: #2b3342;
     }
-    .stApp textarea, .stApp input {
+    /* Inputs: dark fields, light text, soft-gray placeholders */
+    .stApp textarea, .stApp input,
+    .stApp [data-testid="stDateInputField"], .stApp [data-testid="stDateInputButton"],
+    .stApp [data-testid="stNumberInputField"], .stApp [data-testid="stNumberInputStepUp"],
+    .stApp [data-testid="stNumberInputStepDown"] {
         background-color: #12161e !important;
         color: #e9edf5 !important;
         border-color: #2b3342 !important;
     }
+    .stApp [data-testid="stNumberInputStepUp"], .stApp [data-testid="stNumberInputStepDown"] {
+        border-left: 1px solid #2b3342;
+    }
+    .stApp textarea::placeholder, .stApp input::placeholder {
+        color: rgba(233, 237, 245, 0.55) !important; opacity: 1;
+    }
+    /* Date picker calendar popover */
+    .stApp [data-testid="stDatePickerPopover"],
+    .stApp [data-testid="stDatePickerPopover"] * {
+        background-color: #171c26; color: #e9edf5; border-color: #2b3342;
+    }
+
+    /* Alerts: bright, readable text per message kind on the dark background */
+    .stApp [data-testid="stAlertContainer"] { color: #e9edf5; }
+    .stApp [data-testid="stAlertContentInfo"],
+    .stApp [data-testid="stAlertContentInfo"] * { color: #e9edf5; }
+    .stApp [data-testid="stAlertContentSuccess"],
+    .stApp [data-testid="stAlertContentSuccess"] * { color: #9fd8ae; }
+    .stApp [data-testid="stAlertContentWarning"],
+    .stApp [data-testid="stAlertContentWarning"] * { color: #f5d061; }
+    .stApp [data-testid="stAlertContentError"],
+    .stApp [data-testid="stAlertContentError"] * { color: #ff9d94; }
+
     /* Unselected feature cards: quiet chalkboard panels */
     .stApp [data-testid="stBaseButton-secondary"] {
         background-color: #171c26; border-color: #2b3342; color: #d5dae6;
     }
-    .stApp [data-testid="stBaseButton-secondary"]:hover { border-color: #556179; }
+    .stApp [data-testid="stBaseButton-secondary"]:hover { border-color: #556179; color: #f4f6fb; }
 
     /* Actions are chalk: light button, ink text */
     .stApp [data-testid="stBaseButton-primary"] {
         background-color: #e9edf5; color: #14202e; border-color: #e9edf5;
     }
-    .stApp [data-testid="stBaseButton-primary"]:hover { background-color: #ffffff; }
+    .stApp [data-testid="stBaseButton-primary"]:hover { background-color: #ffffff; color: #14202e; }
 
     /* The selected feature card keeps the highlighter glow */
     [data-testid="stHorizontalBlock"] [data-testid="stBaseButton-primary"] {
         background-color: #ffde59; color: #1a2238; border-color: #d9b826;
     }
     [data-testid="stHorizontalBlock"] [data-testid="stBaseButton-primary"]:hover {
-        background-color: #ffe473;
+        background-color: #ffe473; color: #1a2238;
+    }
+
+    /* Quiet utility buttons (Clear) */
+    .stApp [data-testid="stBaseButton-tertiary"] {
+        background-color: transparent; color: #d5dae6; border-color: transparent;
+    }
+    .stApp [data-testid="stBaseButton-tertiary"]:hover {
+        background-color: #1d2431; color: #f4f6fb;
+    }
+
+    /* Theme toggle: chalk text, calm panels, highlighter for the active one */
+    .stApp [data-testid="stButtonGroup"] [role="radio"] {
+        background-color: #171c26; color: #d5dae6; border: 1px solid #2b3342;
+    }
+    .stApp [data-testid="stButtonGroup"] [role="radio"]:hover {
+        border-color: #556179; color: #f4f6fb;
+    }
+    .stApp [data-testid="stButtonGroup"] [role="radio"][data-selected="true"] {
+        background-color: #ffde59; color: #1a2238; border-color: #d9b826;
     }
 
     .stApp [data-testid="stCaptionContainer"], .stApp small { color: #97a1b5; }
