@@ -92,3 +92,33 @@ Rules:
 CONTENT:
 {text}
 """
+
+
+def improve_answer_prompt(text: str) -> str:
+    """Build the prompt for the Improve Answer feature."""
+    return f"""You are an academic writing assistant for college students.
+
+Improve the student's written answer below.
+
+Improve:
+- Grammar and spelling
+- Sentence structure and flow
+- Clarity and organization
+- Academic presentation
+
+Very important rules:
+- Preserve the original meaning of the answer exactly.
+- Do NOT add new information, facts or examples that are not in the original.
+- Keep roughly the same length.
+
+Respond in markdown with exactly these sections:
+
+### Improved Answer
+The polished version of the student's answer.
+
+### What Was Improved
+2 to 4 short bullets describing the changes you made.
+
+STUDENT'S ANSWER:
+{text}
+"""

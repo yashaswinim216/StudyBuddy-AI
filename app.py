@@ -7,6 +7,7 @@ from prompts import (
     MAX_INPUT_CHARS,
     explain_concept_prompt,
     generate_quiz_prompt,
+    improve_answer_prompt,
     summarize_notes_prompt,
 )
 
@@ -92,5 +93,7 @@ def build_prompt(feature: str, text: str) -> str:
         return explain_concept_prompt(text)
     if feature == "❓ Generate Quiz":
         return generate_quiz_prompt(text)
+    if feature == "✍️ Improve Answer":
+        return improve_answer_prompt(text)
     # Remaining features are added in the following commits.
     return text
