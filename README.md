@@ -53,6 +53,15 @@ quick revision.
 Enter your subjects, topics, exam date, and available study hours per day to
 receive a realistic, day-by-day study schedule with revision slots.
 
+### ☀️🌙 Light / Dark Mode
+A compact theme toggle at the top of the page switches between a bright
+clean light theme and a dark theme. The choice stays active while you use
+the app, and all inputs, cards and output adapt to it.
+
+### 🗑️ Clear / Reset
+One click clears the entered text, resets the selected feature and planner
+fields, and removes the previous AI output so you can start fresh.
+
 ## Technologies
 
 | Technology | Purpose |
@@ -114,6 +123,8 @@ The app opens automatically in your browser (usually at
 3. Press **Generate** and wait a few seconds for the AI response
 4. For the **Study Planner**, fill in subjects, topics, exam date, and daily
    study hours, then press **Create Study Plan**
+5. Use the **🗑️ Clear** button to reset the form, and the ☀️/🌙 toggle to
+   switch between light and dark themes
 
 ## Security
 
