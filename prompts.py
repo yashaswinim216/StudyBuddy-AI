@@ -122,3 +122,26 @@ The polished version of the student's answer.
 STUDENT'S ANSWER:
 {text}
 """
+
+
+def generate_flashcards_prompt(text: str) -> str:
+    """Build the prompt for the Generate Flashcards feature."""
+    return f"""You are a revision assistant for college students.
+
+Convert the study material below into 5 to 10 flashcards.
+
+Format every flashcard exactly like this (markdown):
+
+**Card 1**
+- **Q:** <question or term>
+- **A:** <concise answer or explanation>
+
+Rules:
+- Answers must be short and useful for quick revision (one or two lines).
+- Cover the different important ideas in the material.
+- Questions should test real understanding, not trivial details.
+- If the material is thin, fewer flashcards are fine (minimum 5, maximum 10).
+
+STUDY MATERIAL:
+{text}
+"""
